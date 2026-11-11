@@ -11,7 +11,7 @@ NULL
 
 utils::globalVariables(c("x", "y", "xend", "yend", ".a", ".lty", ".x", ".y", ".colour",
                          ".shape", ".alpha", ".size", ".label", ".g", "hj", "vj", ".lab",
-                         "angle", ".view"))
+                         "angle", ".view", ".ga", ".glty"))
 
 #' ggplot2 theme for de Finetti plots
 #'
