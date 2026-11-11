@@ -1,0 +1,5 @@
+Simulated example data for the de Finetti vignette (definetti.make.data.R, seed 2026)
+allele.freq_k2.csv          120 rows: population, locus, p1, p2
+genotype.freq_k3.csv        78 rows: population, generation, AA, Aa, aa
+individuals.ancestry_k4.csv 140 rows: individual, group, Q1..Q4
+max |row sum - 1|: k2 0, k3 0, k4 1.1e-16

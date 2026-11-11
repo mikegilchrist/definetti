@@ -1,0 +1,35 @@
+d1 <- function(a, b) sqrt(sum((a - b)^2))
+good <- data.frame(a = c(.2, .5), b = c(.3, .25), c = c(.5, .25))
+
+test_that("K=3 corners land on triangle vertices", {
+  V3 <- definetti:::.df_xy(diag(3), 3)
+  expect_equal(unname(as.matrix(V3[, 1:2])), definetti:::.df_vertices(3)[, 1:2])
+})
+test_that("K=4 is a regular unit tetrahedron centred at the origin", {
+  V <- definetti:::.df_vertices(4)
+  dd <- combn(4, 2, function(i) d1(V[i[1], ], V[i[2], ]))
+  expect_equal(as.vector(dd), rep(1, 6))
+  expect_equal(colMeans(V), c(0, 0, 0))
+})
+test_that("projection of the centroid is the origin", {
+  expect_equal(unlist(definetti:::.df_xy(matrix(0.25, 1, 4), 4, c(33, 41))[1, 1:2]), c(x = 0, y = 0))
+})
+test_that("bad input fails loudly", {
+  expect_error(definetti_plot(transform(good, a = a + .1), c("a", "b", "c")), "sum to 1")
+  expect_error(definetti_plot(transform(good, a = c(NA, .5)), c("a", "b", "c")), "NA")
+  expect_error(definetti_plot(transform(good, a = c(-.2, .5), c = c(.9, .25)), c("a", "b", "c")), "negative")
+  expect_error(definetti_plot(good, rep("a", 5)), "2, 3 or 4")
+  expect_error(definetti_plot_4(good, c("a", "b", "c")), "exactly 4")
+  expect_error(definetti_plot(good, c("a", "b", "c"), colour_by = "nope"), "not in data")
+  expect_error(definetti_plot(data.frame(a = .25, b = .25, c = .25, d = .25), letters[1:4], show_hw = TRUE), "K = 3")
+  expect_error(definetti_plot(good, c("a", "b", "c"), colour_by = "a", colour_component = "b"), "either")
+})
+test_that("normalize rescues rows and plots build for every K", {
+  expect_s3_class(definetti_plot(transform(good, a = a + .1), c("a", "b", "c"), normalize = TRUE), "ggplot")
+  expect_s3_class(definetti_plot(good[, 1:2] / rowSums(good[, 1:2]), c("a", "b")), "ggplot")
+  q <- read.csv(system.file("extdata", "individuals.ancestry_k4.csv", package = "definetti"))
+  expect_s3_class(definetti_plot(q, paste0("Q", 1:4), view = list(c(25, 20), c(0, 85))), "ggplot")
+  expect_s3_class(definetti_plot(q, paste0("Q", 1:4), colour_component = "Q4", colour_range = c("khaki", "navy")), "ggplot")
+  tf <- tempfile(fileext = ".png"); ggplot2::ggsave(tf, definetti_plot(q, paste0("Q", 1:4)), width = 4, height = 4)
+  expect_true(file.exists(tf))
+})

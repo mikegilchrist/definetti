@@ -1,0 +1,176 @@
+---
+title: "de Finetti plots in ggplot2: allele frequencies and individual composition"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{de Finetti plots in ggplot2: allele frequencies and individual composition}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6.5, fig.height = 5, dpi = 120,
+                      message = FALSE, warning = FALSE)
+library(definetti)
+```
+
+# Idea
+
+A composition of $K$ non-negative components that sum to 1 (allele
+frequencies of a population, or the ancestry fractions of an individual) lives
+on a $(K-1)$-dimensional simplex. The de Finetti approach plots it in that
+reduced space:
+
+| $K$ | simplex | drawn as |
+|----:|---------|----------|
+| 2 | line segment | horizontal axis, points jittered vertically |
+| 3 | triangle | equilateral triangle |
+| 4 | tetrahedron | orthographic projection with depth cues; several views can be faceted |
+
+A corner is the state in which one component equals 1; position is the
+frequency-weighted mean of the corners. Everything is built on `ggplot2`, so the
+result is an ordinary `ggplot` object.
+
+```{r source, eval=FALSE}
+library(definetti)
+```
+
+# Example data
+
+Three simulated files ship in `inst/extdata/` (regenerate with
+`data-raw/make.data.R`; see `data.summary.txt` there).
+
+```{r data}
+ext <- function(f) system.file("extdata", f, package = "definetti")
+# K = 2: population, locus, p1, p2
+f2 <- read.csv(ext("allele.freq_k2.csv"))
+# K = 3: population, generation, AA, Aa, aa
+g3 <- read.csv(ext("genotype.freq_k3.csv"))
+# K = 4: individual, group, Q1..Q4
+q4 <- read.csv(ext("individuals.ancestry_k4.csv"))
+head(f2, 3); head(g3, 3); head(q4, 3)
+```
+
+Rows must sum to 1; otherwise the functions stop with an error (or rescale if
+`normalize = TRUE`).
+
+# Two components: a line
+
+```{r k2, fig.height=3}
+definetti_plot(f2, c("p1", "p2"), colour_by = "population",
+               vertex_labels = c("Allele 1", "Allele 2"),
+               axis_titles = c("Frequency: Allele 1", "Frequency: Allele 2"),
+               point_alpha = 0.6)
+```
+
+Tick marks are every 0.1; labels appear only at 0, 0.5 and 1 (`label_at`,
+`n_ticks`). The vertical spread is jitter only (`jitter_height`, `seed`).
+
+# Three components: a triangle
+
+Genotype frequencies from drift trajectories, joined in generation order, with
+the Hardy-Weinberg curve (columns are homozygote 1, heterozygote, homozygote 2):
+
+```{r k3-hw}
+definetti_plot(g3, c("AA", "Aa", "aa"), colour_by = "population",
+               connect_by = "population", show_hw = TRUE,
+               vertex_labels = c("AA", "Aa", "aa"), point_size = 1.8,
+               legend_title = "Population")
+```
+
+Individuals are the same call with different data. With `colour_component` the
+third component is shown as colour and the geometry is the view looking down its
+corner (here a line):
+
+```{r k3-colour, fig.height=3.3}
+definetti_plot(g3, c("AA", "Aa", "aa"), colour_component = "Aa",
+               vertex_labels = c("AA", "Aa", "aa"), jitter_height = 0.03)
+```
+
+# Four components: a tetrahedron
+
+```{r k4}
+definetti_plot(q4, paste0("Q", 1:4), colour_by = "group", view = c(25, 20),
+               vertex_labels = paste("Ancestry", 1:4), legend_position = "upper-left")
+```
+
+One projection hides points, so several views can be shown at once:
+
+```{r k4-views, fig.width=8, fig.height=7.5}
+definetti_plot(q4, paste0("Q", 1:4), colour_by = "group",
+               view = list(c(25, 20), c(115, 20), c(0, 85), c(205, -20)),
+               legend_position = "bottom")
+```
+
+Far points are faded and smaller (`depth_cue`, `depth_alpha_far`); dashed edges
+are hidden behind the solid faces.
+
+## Colour for the fourth component
+
+Looking down the corner of one component gives a triangle, with that
+component's frequency mapped to colour:
+
+```{r k4-colour}
+definetti_plot(q4, paste0("Q", 1:4), colour_component = "Q4",
+               vertex_labels = paste("Ancestry", 1:4), legend_title = "Ancestry 4")
+```
+
+Points with a high value of the dropped component sit near the centre, because
+its corner is placed at the centre of the triangle.
+
+The colour scale follows human perception rather than RGB values. The default
+is a viridis palette, which is uniform in perceived lightness (CIELAB); other
+members are chosen with `colour_option` ("magma", "plasma", "cividis", ...,
+"cividis" being suited to colour-vision deficiency). A two-colour ramp,
+`colour_range = c("lightgoldenrod1", "navy")`, is interpolated in CIELAB
+space, not RGB. Avoid a white low end: low values then disappear on a white
+background. Any other ggplot scale can be passed as `colour_scale`.
+
+```{r k4-colour2, fig.height=4.5}
+definetti_plot(q4, paste0("Q", 1:4), colour_component = "Q4", colour_option = "magma",
+               vertex_labels = paste("Ancestry", 1:4), legend_title = "Ancestry 4")
+```
+
+# Customising the appearance
+
+Text, theme and labels are plain arguments. Sizes are in points.
+
+```{r custom}
+definetti_plot(q4, paste0("Q", 1:3), colour_by = "group", normalize = TRUE,
+               title = "Rescaled to first three components",
+               figure_number = 1,
+               caption = "Each point is one individual; Q4 omitted and the rest
+                          rescaled to sum to 1.",
+               base_size = 14, base_family = "serif",
+               vertex_label_face = "bold.italic", frame_colour = "grey30",
+               point_size = 3, point_alpha = 0.7,
+               palette = c(Alpha = "#1b9e77", Beta = "#d95f02", Gamma = "#7570b3",
+                           Delta = "#e7298a", Admixed = "grey40"),
+               legend_position = "upper-right")
+```
+
+Anything not covered is passed on to `theme()`, and the result can be modified
+as any ggplot:
+
+```{r custom2}
+p <- definetti_plot(q4, paste0("Q", 1:3), colour_by = "group", normalize = TRUE,
+                    legend_position = "none")
+p + ggplot2::theme(plot.background = ggplot2::element_rect(fill = "grey95"))
+```
+
+# Argument reference
+
+| group | arguments |
+|-------|-----------|
+| data | `data`, `freq_cols`, `normalize`, `tol` |
+| mappings | `colour_by`, `shape_by`, `label_by`, `connect_by`, `colour_component`, `colour_scale`, `colour_option`, `colour_range`, `palette` |
+| text | `title`, `subtitle`, `caption`, `figure_number`, `caption_wrap`, `vertex_labels`, `axis_titles`, `legend_title`, `shape_title` |
+| ticks and grid | `tick_labels`, `n_ticks`, `label_at`, `show_grid`, `grid_at`, `edge_ticks`, `grid_colour`, `grid_linetype`, `grid_linewidth` |
+| tetrahedron | `view`, `depth_cue`, `depth_alpha_far` |
+| points and paths | `point_size`, `point_alpha`, `point_colour`, `point_shape`, `path_colour`, `path_linewidth`, `path_arrow`, `label_size` |
+| frame | `frame_colour`, `frame_linewidth`, `show_hw`, `hw_colour`, `hw_linetype` |
+| fonts (pt) | `base_size`, `base_family`, `base_face`, `vertex_label_size`, `vertex_label_face`, `tick_label_size`, `axis_title_size`, `axis_title_face` |
+| layout | `vertex_offset`, `tick_offset`, `axis_title_offset`, `margin`, `jitter_height`, `seed`, `legend_position` |
+| theme | `theme_definetti()` arguments pass through `...` |
+
+`theme_definetti()` can also be used on its own:
+`ggplot2::ggplot(...) + theme_definetti(base_size = 14, legend_position = "none")`.
