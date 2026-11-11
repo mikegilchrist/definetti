@@ -15,8 +15,8 @@ summing to 1 is drawn one dimension lower than K:
 ```r
 # from a local clone
 install.packages("path/to/definetti", repos = NULL, type = "source")
-# or, once on GitHub:
-# remotes::install_github("<owner>/definetti")
+# or from GitHub:
+remotes::install_github("mikegilchrist/definetti")
 ```
 
 ## Use
