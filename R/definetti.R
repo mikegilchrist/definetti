@@ -187,6 +187,7 @@ theme_definetti <- function(base_size = 12, base_family = "", base_face = "plain
 #' @param show_grid,grid_at Light gridlines
 #' at the given levels.
 #' @param edge_ticks Tick marks on the tetrahedron edges (K = 4).
+#' @param face_grid K = 4: draw the `grid_at` levels as lines on the faces of the tetrahedron (faces turned away from the viewer are dashed and faint).
 #' @param colour_component Name of one of `freq_cols` to show as colour instead of
 #'   geometry (K = 3, 4). The component's corner is placed at the centre of the others.
 #' @param colour_scale A ggplot2 colour scale for `colour_component` (overrides the next two).
@@ -227,7 +228,7 @@ definetti_plot <- function(data, freq_cols,
                            vertex_labels = freq_cols, axis_titles = NULL,
                            legend_title = NULL, shape_title = NULL,
                            tick_labels = TRUE, n_ticks = 10, label_at = c(0, 0.5, 1),
-                           show_grid = TRUE, grid_at = 0.5, edge_ticks = TRUE,
+                           show_grid = TRUE, grid_at = 0.5, edge_ticks = TRUE, face_grid = FALSE,
                            colour_component = NULL, colour_scale = NULL,
                            colour_option = "viridis", colour_range = NULL,
                            view = c(20, 20), depth_cue = TRUE, depth_alpha_far = 0.35,
@@ -310,7 +311,7 @@ definetti_plot <- function(data, freq_cols,
             else "view"
   vnames <- factor(vnames, levels = unique(vnames))
 
-  pts <- list(); paths <- list(); frame_seg <- list(); vtx <- list(); anch <- list()
+  pts <- list(); paths <- list(); frame_seg <- list(); vtx <- list(); anch <- list(); fseg <- list()
   grid_seg <- NULL; poly <- NULL; ticks <- NULL; ttl <- NULL; hw <- NULL
 
   # K = 2 vertical jitter, local seed so the user's RNG stream is untouched
@@ -415,6 +416,22 @@ definetti_plot <- function(data, freq_cols,
         x = pv$x[pr[, 1]], y = pv$y[pr[, 1]], xend = pv$x[pr[, 2]], yend = pv$y[pr[, 2]],
         .a = if (depth_cue) depth_alpha_far + (1 - depth_alpha_far) * near else 1,
         .lty = ifelse(hid, "dashed", "solid"), .view = vn)
+      if (face_grid) {
+        # lines of constant component frequency drawn on each of the 4 faces;
+        # a face is seen from outside iff the vertex opposite it is farther than the centre
+        gj <- grid_at[grid_at > 0 & grid_at < 1]
+        for (m in 1:4) {
+          fv <- setdiff(1:4, m); vis <- pv$depth[m] > 0
+          for (i in fv) for (t in gj) {
+            o <- setdiff(fv, i)
+            A <- t * V[i, ] + (1 - t) * V[o[1], ]; B <- t * V[i, ] + (1 - t) * V[o[2], ]
+            q <- .df_project(rbind(A, B), vw)
+            fseg[[length(fseg) + 1]] <- data.frame(
+              x = q$x[1], y = q$y[1], xend = q$x[2], yend = q$y[2],
+              .ga = if (vis) 1 else 0.45, .glty = if (vis) grid_linetype else "dashed", .view = vn)
+          }
+        }
+      }
       if (edge_ticks) {
         tk <- list(); tl <- list(); lt <- ti[lab_lv(ti)]
         for (e in seq_len(nrow(pr))) {
@@ -445,6 +462,7 @@ definetti_plot <- function(data, freq_cols,
   }
   pts <- do.call(rbind, pts); frame_seg <- do.call(rbind, frame_seg); vtx <- do.call(rbind, vtx)
   anch <- do.call(rbind, anch)
+  fseg <- if (length(fseg)) do.call(rbind, fseg) else NULL
   # make room for the horizontal extent of the vertex labels (heuristic width)
   w <- nchar(vtx$.lab) * 0.022 * vl_pt / 12
   anch <- rbind(anch, data.frame(x = c(vtx$x - vtx$hj * w, vtx$x + (1 - vtx$hj) * w),
@@ -458,6 +476,10 @@ definetti_plot <- function(data, freq_cols,
   if (!is.null(grid_seg))
     p <- p + geom_segment(data = grid_seg, aes(x = x, y = y, xend = xend, yend = yend),
                           colour = grid_colour, linetype = grid_linetype, linewidth = grid_linewidth)
+  if (!is.null(fseg))
+    p <- p + geom_segment(data = fseg, aes(x = x, y = y, xend = xend, yend = yend,
+                                           alpha = .ga, linetype = .glty),
+                          colour = grid_colour, linewidth = grid_linewidth)
   if (!is.null(tick_seg))
     p <- p + geom_segment(data = tick_seg, aes(x = x, y = y, xend = xend, yend = yend),
                           colour = frame_colour, linewidth = frame_linewidth * 0.7)
@@ -476,7 +498,7 @@ definetti_plot <- function(data, freq_cols,
                        arrow = if (path_arrow) grid::arrow(length = grid::unit(0.08, "inches")) else NULL)
   }
   p <- p + geom_point(data = pts, aes(x = .x, y = .y, colour = .colour, shape = .shape,
-                                      alpha = .alpha, size = .size), stroke = 0)
+                                      alpha = .alpha, size = .size), stroke = 0.6)
   if (!is.null(label_by))
     p <- p + geom_text(data = pts, aes(x = .x, y = .y, label = .label), hjust = 0, nudge_x = 0.012,
                        size = mm(lb_pt), family = base_family, check_overlap = TRUE)

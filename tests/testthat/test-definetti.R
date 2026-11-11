@@ -33,3 +33,14 @@ test_that("normalize rescues rows and plots build for every K", {
   tf <- tempfile(fileext = ".png"); ggplot2::ggsave(tf, definetti_plot(q, paste0("Q", 1:4)), width = 4, height = 4)
   expect_true(file.exists(tf))
 })
+
+test_that("face_grid builds for single and multiple views", {
+  q <- read.csv(system.file("extdata", "individuals.ancestry_k4.csv", package = "definetti"))
+  p <- definetti_plot(q, paste0("Q", 1:4), face_grid = TRUE, grid_at = c(.25, .5, .75))
+  expect_s3_class(p, "ggplot")
+  b <- ggplot2::ggplot_build(p)
+  n_seg <- sum(vapply(b$data, function(d) if ("xend" %in% names(d)) nrow(d) else 0L, 1L))
+  expect_gt(n_seg, 4 * 3 * 3)          # 36 face lines plus frame/tick segments
+  expect_s3_class(definetti_plot(q, paste0("Q", 1:4), face_grid = TRUE,
+                                 view = list(c(25, 20), c(205, -20))), "ggplot")
+})

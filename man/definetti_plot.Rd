@@ -30,6 +30,7 @@ definetti_plot(
   show_grid = TRUE,
   grid_at = 0.5,
   edge_ticks = TRUE,
+  face_grid = FALSE,
   colour_component = NULL,
   colour_scale = NULL,
   colour_option = "viridis",
@@ -116,6 +117,8 @@ figure width in inches (used only for caption wrapping).}
 at the given levels.}
 
 \item{edge_ticks}{Tick marks on the tetrahedron edges (K = 4).}
+
+\item{face_grid}{K = 4: draw the `grid_at` levels as lines on the faces of the tetrahedron (faces turned away from the viewer are dashed and faint).}
 
 \item{colour_component}{Name of one of `freq_cols` to show as colour instead of
 geometry (K = 3, 4). The component's corner is placed at the centre of the others.}
