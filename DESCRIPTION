@@ -2,7 +2,7 @@ Package: definetti
 Type: Package
 Title: de Finetti (Simplex) Plots for Allele Frequencies and Individual Composition
 Version: 0.1.0
-Authors@R: person("Michael", "Gilchrist", email = "maintainer@example.org", role = c("aut", "cre"))
+Authors@R: person("Michael", "Gilchrist", email = "difinetti@utk.edu", role = c("aut", "cre"))
 Description: ggplot2 routines that plot compositions of two, three or four
     components (allele frequencies, genotype frequencies or the ancestry
     fractions of individuals) in the reduced-dimension de Finetti space: a line,
